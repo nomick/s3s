@@ -200,8 +200,8 @@ impl AwsConversion for s3s::dto::LifecycleExpiration {
     fn try_from_aws(x: Self::Target) -> S3Result<Self> {
         Ok(Self {
             date: try_from_aws(x.date)?,
-            days: ignore_default(x.days, 0),
-            expired_object_delete_marker: ignore_default(x.expired_object_delete_marker, false),
+            days: try_from_aws(x.days)?,
+            expired_object_delete_marker: try_from_aws(x.expired_object_delete_marker)?,
         })
     }
 
@@ -212,11 +212,4 @@ impl AwsConversion for s3s::dto::LifecycleExpiration {
         y = y.set_expired_object_delete_marker(x.expired_object_delete_marker);
         Ok(y.build())
     }
-}
-
-fn ignore_default<T: Eq + Copy>(val: T, default: T) -> Option<T> {
-    if val == default {
-        return None;
-    }
-    Some(val)
 }

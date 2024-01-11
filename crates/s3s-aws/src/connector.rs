@@ -4,9 +4,12 @@ use s3s::{S3Error, S3Result};
 use std::ops::Not;
 use std::task::{Context, Poll};
 
-use aws_smithy_http::body::SdkBody;
-use aws_smithy_http::byte_stream::ByteStream;
-use aws_smithy_http::result::ConnectorError;
+use aws_smithy_http::futures_stream_adapter::FuturesStreamCompatByteStream;
+
+use aws_smithy_runtime_api::client::result::ConnectorError;
+
+use aws_smithy_types::body::SdkBody;
+use aws_smithy_types::byte_stream::ByteStream;
 
 use hyper::header::HOST;
 use hyper::http;
@@ -54,12 +57,12 @@ fn convert_input(mut req: Request<SdkBody>) -> Request<s3s::Body> {
         req.headers_mut().insert(HOST, host);
     }
 
-    req.map(|sdk_body| s3s::Body::from(hyper::Body::wrap_stream(ByteStream::from(sdk_body))))
+    req.map(|sdk_body| s3s::Body::from(hyper::Body::wrap_stream(FuturesStreamCompatByteStream::new(ByteStream::from(sdk_body)))))
 }
 
 fn convert_output(result: S3Result<Response<s3s::Body>>) -> Result<Response<SdkBody>, ConnectorError> {
     match result {
-        Ok(res) => Ok(res.map(|s3s_body| SdkBody::from(hyper::Body::from(s3s_body)))),
+        Ok(res) => Ok(res.map(|s3s_body| SdkBody::from_body_0_4(hyper::Body::from(s3s_body)))),
         Err(e) => Err(on_err(e)),
     }
 }
